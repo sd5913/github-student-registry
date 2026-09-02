@@ -28,6 +28,10 @@ yarn-error.log*
 
 # local environment
 .env*
+.dev.vars*
+
+# student rosters: real student IDs, never committed (this repo is public)
+db/cohorts/*.cohort
 !.env.example
 !.dev.vars.example
 

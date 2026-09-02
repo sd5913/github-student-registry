@@ -69,6 +69,37 @@ It is safe to re-run; an existing database is reused rather than duplicated. To 
 
 If the first deploy creates the `workers.dev` address you will keep, update `NEXT_PUBLIC_SITE_URL` with it and deploy once more.
 
+## The cohort roster
+
+Only students on the roster can register, and each intake is stored under its
+own cohort so the registry can be reused next year.
+
+A roster is a file of enrolled student IDs, one per line, holding the last four
+digits of the PolyU ID and its trailing letter:
+
+```
+5668G
+4605G
+```
+
+Put it at `db/cohorts/<cohort>.cohort` and load it into D1:
+
+```bash
+npm run roster:seed -- 2026 --remote   # production
+npm run roster:seed -- 2026            # local development database
+```
+
+Seeding replaces that cohort's rows, so removing a line removes the entry.
+A duplicate or malformed line aborts the run before anything is written.
+
+`db/cohorts/*.cohort` is git-ignored on purpose: the IDs are student data, and
+this repository is public. A published roster would also let anyone claim an ID
+before its owner registers. Keep the file locally and re-seed when it changes.
+
+For next year: add `db/cohorts/2027.cohort`, seed it, then set
+`CURRENT_COHORT` in `lib/cohort.ts` to `2027` and deploy. Existing rows keep
+their own cohort and are left alone.
+
 ## Local development
 
 Copy `.dev.vars.example` to `.dev.vars` and add development OAuth credentials and random secrets. Set the OAuth callback to `http://localhost:3000/api/auth/github/callback`.
@@ -82,10 +113,11 @@ For a local production-style Worker preview:
 ```bash
 npm run build
 npm run db:migrate:local
+npm run roster:seed -- 2026
 npm start
 ```
 
-Never commit `.env`, `.dev.vars`, OAuth secrets, or admin tokens.
+Never commit `.env`, `.dev.vars`, `db/cohorts/*.cohort`, OAuth secrets, or admin tokens.
 
 ## Automatic deployment from GitHub
 

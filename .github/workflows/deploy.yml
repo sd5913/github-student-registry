@@ -50,6 +50,7 @@ jobs:
         run: |
           npm run lint
           npx tsc --noEmit
+          npm test
 
       - name: Build Worker
         run: npm run build

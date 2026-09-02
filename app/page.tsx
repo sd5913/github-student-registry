@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { env } from 'cloudflare:workers';
 import { ArrowRight, Check, LockKeyhole } from 'lucide-react';
+import { CURRENT_COHORT } from '@/lib/cohort';
 import { getRegistration } from '@/lib/db';
 import { readSession } from '@/lib/session';
 import { RegistrationForm } from './registration-form';
@@ -15,7 +16,7 @@ function GitHubMark() {
 export default async function Home() {
   const cookieStore = await cookies();
   const session = await readSession(cookieStore.get('sd5913_session')?.value);
-  const registration = session ? await getRegistration(env.DB, session.githubId) : null;
+  const registration = session ? await getRegistration(env.DB, CURRENT_COHORT, session.githubId) : null;
 
   return (
     <main className="site-shell">
@@ -39,7 +40,7 @@ export default async function Home() {
             </li>
             <li className={registration ? 'done' : session ? 'active' : ''}>
               <span>{registration ? <Check size={16} /> : '02'}</span>
-              <div><strong>Add student ID</strong><small>Use the ID shown on your PolyU record.</small></div>
+              <div><strong>Add student ID</strong><small>Just the last four digits of your PolyU ID.</small></div>
             </li>
             <li className={registration ? 'active' : ''}>
               <span>03</span>
@@ -75,7 +76,7 @@ export default async function Home() {
               <>
                 <p className="eyebrow">STEP 02 · IDENTIFY</p>
                 <h2 id="card-title">Now, your student ID.</h2>
-                <p className="card-copy">You’re signed in as <strong>@{session.login}</strong>. Enter your ID exactly as it appears in university records.</p>
+                <p className="card-copy">You’re signed in as <strong>@{session.login}</strong>. Enter the last four digits of the student ID on your PolyU record.</p>
                 <RegistrationForm login={session.login} avatarUrl={session.avatarUrl} initialStudentId="" />
                 {/* oxlint-disable-next-line next/no-html-link-for-pages */}
                 <a className="text-link" href="/api/auth/logout">Not your GitHub account?</a>
@@ -85,7 +86,7 @@ export default async function Home() {
           <p className="support-copy">Something not right? Contact your course instructor.</p>
         </div>
       </section>
-      <footer><span>SD5913 · 2026</span><span>POLYU SCHOOL OF DESIGN</span></footer>
+      <footer><span>SD5913 · {CURRENT_COHORT}</span><span>POLYU SCHOOL OF DESIGN</span></footer>
     </main>
   );
 }

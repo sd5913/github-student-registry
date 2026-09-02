@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers';
 import { env } from 'cloudflare:workers';
+import { CURRENT_COHORT, isOnRoster } from '@/lib/cohort';
 import { getRegistration, saveRegistration } from '@/lib/db';
 import { readSession } from '@/lib/session';
-
-const STUDENT_ID = /^[A-Z0-9][A-Z0-9-]{4,19}$/;
+import { normalizeStudentId, STUDENT_ID } from '@/lib/student-id';
 
 export async function POST(request: Request) {
   const origin = request.headers.get('origin');
@@ -15,12 +15,13 @@ export async function POST(request: Request) {
   let body: { studentId?: unknown };
   try { body = await request.json() as { studentId?: unknown }; }
   catch { return Response.json({ error: 'Invalid request.' }, { status: 400 }); }
-  const studentId = typeof body.studentId === 'string' ? body.studentId.trim().toUpperCase() : '';
-  if (!STUDENT_ID.test(studentId)) return Response.json({ error: 'Enter a valid student ID using 5–20 letters, numbers, or hyphens.' }, { status: 400 });
+  const studentId = typeof body.studentId === 'string' ? normalizeStudentId(body.studentId) : '';
+  if (!STUDENT_ID.test(studentId)) return Response.json({ error: 'Enter the last four digits of your student ID.' }, { status: 400 });
+  if (!await isOnRoster(env.DB, CURRENT_COHORT, studentId)) return Response.json({ error: `That ID isn’t on the SD5913 ${CURRENT_COHORT} roster — check the digits or ask your instructor.` }, { status: 400 });
 
-  const existing = await env.DB.prepare('SELECT github_id AS githubId FROM registrations WHERE student_id = ?').bind(studentId).first<{ githubId: string }>();
+  const existing = await env.DB.prepare('SELECT github_id AS githubId FROM registrations WHERE cohort = ? AND student_id = ?').bind(CURRENT_COHORT, studentId).first<{ githubId: string }>();
   if (existing && existing.githubId !== session.githubId) return Response.json({ error: 'That student ID is already matched. Contact your instructor if this is yours.' }, { status: 409 });
-  try { await saveRegistration(env.DB, session, studentId); }
+  try { await saveRegistration(env.DB, CURRENT_COHORT, session, studentId); }
   catch { return Response.json({ error: 'Could not save the match. Please try again.' }, { status: 500 }); }
-  return Response.json({ ok: true, registration: await getRegistration(env.DB, session.githubId) });
+  return Response.json({ ok: true, registration: await getRegistration(env.DB, CURRENT_COHORT, session.githubId) });
 }

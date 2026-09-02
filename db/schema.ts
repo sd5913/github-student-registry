@@ -32,3 +32,28 @@ export const registrations = sqliteTable(
     uniqueIndex('idx_registrations_cohort_student_id').on(table.cohort, table.studentId),
   ],
 );
+
+// Week-1 intake survey. Kept in its own table rather than as columns on
+// `registrations` for two reasons: a student who skips it still registers
+// cleanly, and the answers are pitching data with a shelf life of one
+// semester, whereas a registration is the record of who someone is.
+export const surveyResponses = sqliteTable(
+  'survey_responses',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    cohort: text('cohort').notNull(),
+    // Joins to `registrations`, so the survey never stores a student ID itself.
+    githubId: text('github_id').notNull(),
+    experience: text('experience'),
+    terminal: text('terminal'),
+    agentUse: text('agent_use'),
+    // Comma-joined slugs; the question is multi-select.
+    agentTools: text('agent_tools'),
+    machine: text('machine'),
+    interest: text('interest'),
+    goal: text('goal'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [uniqueIndex('idx_survey_cohort_github_id').on(table.cohort, table.githubId)],
+);

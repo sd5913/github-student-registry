@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { isAdminLogin } from '@/lib/admin';
 import { CURRENT_COHORT, isKnownCohort, isOnRoster } from '@/lib/cohort';
-import { listRegistrations, releaseRegistration, updateRegistrationStudentId } from '@/lib/db';
+import { listRegistrations, listSurveys, releaseRegistration, updateRegistrationStudentId } from '@/lib/db';
 import { required, type AppEnv } from '@/lib/env';
 import { readSession } from '@/lib/session';
 import { normalizeStudentId, STUDENT_ID } from '@/lib/student-id';
@@ -33,13 +33,26 @@ export async function GET(request: Request) {
   const cohort = requested === 'all' ? null : requested;
   const registrations = await listRegistrations(env.DB, cohort);
 
+  // Joined in the export rather than the query: the survey is optional, so a
+  // LEFT JOIN would only move the null handling into SQL.
+  const surveys = await listSurveys(env.DB, cohort);
+  const surveyFor = (row: { cohort: string; githubId: string }) => surveys.get(cohort === null ? `${row.cohort}:${row.githubId}` : row.githubId);
+
   if (new URL(request.url).searchParams.get('format') === 'csv') {
-    const header = ['cohort', 'student_id', 'github_login', 'github_id', 'github_name', 'github_url', 'created_at', 'updated_at'];
-    const rows = registrations.map((row) => [row.cohort, row.studentId, row.githubLogin, row.githubId, row.githubName, `https://github.com/${row.githubLogin}`, row.createdAt, row.updatedAt].map(csvCell).join(','));
+    const header = ['cohort', 'student_id', 'github_login', 'github_id', 'github_name', 'github_url', 'created_at', 'updated_at', 'experience', 'terminal', 'agent_use', 'agent_tools', 'machine', 'interest', 'goal'];
+    const rows = registrations.map((row) => {
+      const survey = surveyFor(row);
+      return [row.cohort, row.studentId, row.githubLogin, row.githubId, row.githubName, `https://github.com/${row.githubLogin}`, row.createdAt, row.updatedAt, survey?.experience ?? null, survey?.terminal ?? null, survey?.agentUse ?? null, survey?.agentTools ?? null, survey?.machine ?? null, survey?.interest ?? null, survey?.goal ?? null].map(csvCell).join(',');
+    });
     const filename = `sd5913-${cohort ?? 'all'}-github-students.csv`;
     return new Response([header.join(','), ...rows].join('\n'), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${filename}"`, 'cache-control': 'no-store' } });
   }
-  return Response.json({ cohort: requested, count: registrations.length, registrations }, { headers: { 'cache-control': 'no-store' } });
+  return Response.json({
+    cohort: requested,
+    count: registrations.length,
+    surveyCount: surveys.size,
+    registrations: registrations.map((row) => ({ ...row, survey: surveyFor(row) ?? null })),
+  }, { headers: { 'cache-control': 'no-store' } });
 }
 
 type Action = { action?: unknown; cohort?: unknown; githubId?: unknown; studentId?: unknown };

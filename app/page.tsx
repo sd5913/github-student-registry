@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { env } from 'cloudflare:workers';
 import { ArrowRight, Check, LockKeyhole } from 'lucide-react';
 import { CURRENT_COHORT } from '@/lib/cohort';
-import { getRegistration } from '@/lib/db';
+import { getRegistration, getSurvey } from '@/lib/db';
 import { readSession } from '@/lib/session';
 import { RegistrationForm } from './registration-form';
+import { SurveyForm } from './survey-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,7 @@ export default async function Home() {
   const cookieStore = await cookies();
   const session = await readSession(cookieStore.get('sd5913_session')?.value);
   const registration = session ? await getRegistration(env.DB, CURRENT_COHORT, session.githubId) : null;
+  const survey = session && registration ? await getSurvey(env.DB, CURRENT_COHORT, session.githubId) : null;
 
   return (
     <main className="site-shell">
@@ -44,7 +46,7 @@ export default async function Home() {
             </li>
             <li className={registration ? 'active' : ''}>
               <span>03</span>
-              <div><strong>You’re matched</strong><small>You can return any time to update the ID.</small></div>
+              <div><strong>You’re matched</strong><small>Then tell us where you’re starting from, so we pitch this right.</small></div>
             </li>
           </ol>
         </div>
@@ -69,6 +71,11 @@ export default async function Home() {
                 <h2 id="card-title">You’re on the list.</h2>
                 <p className="card-copy"><strong>@{session.login}</strong> is matched to student ID <strong>{registration.studentId}</strong>.</p>
                 <RegistrationForm login={session.login} avatarUrl={session.avatarUrl} initialStudentId={registration.studentId} isUpdate />
+                <SurveyForm
+                  initial={{ experience: survey?.experience ?? null, terminal: survey?.terminal ?? null, agentUse: survey?.agentUse ?? null, agentTools: survey?.agentTools ?? null, machine: survey?.machine ?? null, interest: survey?.interest ?? null }}
+                  initialGoal={survey?.goal ?? ''}
+                  answered={survey !== null}
+                />
                 {/* oxlint-disable-next-line next/no-html-link-for-pages */}
                 <a className="text-link" href="/api/auth/logout">Use a different GitHub account</a>
               </>

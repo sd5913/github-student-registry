@@ -21,7 +21,7 @@ const localBindingConfig = {
           binding: d1,
           database_name: 'github-student-registry',
           database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
-          migrations_dir: '../../migrations',
+          migrations_dir: 'migrations',
         },
       ]
     : [],

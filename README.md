@@ -167,9 +167,30 @@ The GitHub OAuth credentials and `SESSION_SECRET` / `ADMIN_TOKEN` remain Cloudfl
 
 Roll the API token at [API Tokens](https://dash.cloudflare.com/profile/api-tokens) with **Roll** and update the `CLOUDFLARE_API_TOKEN` secret, or **Delete** it to cut off deployment access immediately. Rotate a Worker secret by running `wrangler secret put` again with the new value; the change takes effect on the next request without a redeploy.
 
+## Instructor view
+
+`/admin` lists the current cohort's registrations, who on the roster has not
+registered yet, and a CSV download. From there you can release a registration
+(freeing an ID whose owner is locked out because someone else claimed it) or
+correct a student ID in place. An edited ID is checked against the roster and
+refused if another account already holds it.
+
+Access is granted by the `ADMIN_LOGINS` Worker secret, a comma-separated list
+of GitHub logins:
+
+```bash
+echo "your-github-login" | npx wrangler secret put ADMIN_LOGINS --config dist/server/wrangler.json
+```
+
+Adding a teaching assistant is another `wrangler secret put`; it takes effect on
+the next request with no redeploy. Anyone signed in who is not on the list gets
+a 404, so the page is not advertised to students. If the secret is unset, nobody
+has access. Note that the list matches GitHub logins, so renaming your GitHub
+account means updating the secret.
+
 ## Export the class list
 
-Keep `ADMIN_TOKEN` private. Download a spreadsheet-ready CSV with:
+The same data is available without signing in, for scripts. Keep `ADMIN_TOKEN` private and download a spreadsheet-ready CSV with:
 
 ```bash
 curl -fsS \

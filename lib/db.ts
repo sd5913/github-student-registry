@@ -31,3 +31,26 @@ export async function listRegistrations(db: D1Database, cohort: string | null): 
   const result = await statement.all<Registration>();
   return result.results;
 }
+
+/** Every enrolled ID for a cohort, whether or not it has been claimed. */
+export async function listRoster(db: D1Database, cohort: string): Promise<string[]> {
+  const result = await db.prepare('SELECT student_id AS studentId FROM cohort_roster WHERE cohort = ? ORDER BY student_id').bind(cohort).all<{ studentId: string }>();
+  return result.results.map((row) => row.studentId);
+}
+
+/** Cohorts that have a roster loaded, newest intake first. */
+export async function listCohorts(db: D1Database): Promise<string[]> {
+  const result = await db.prepare('SELECT DISTINCT cohort FROM cohort_roster ORDER BY cohort DESC').all<{ cohort: string }>();
+  return result.results.map((row) => row.cohort);
+}
+
+/** Frees a claimed ID so its owner can register. Returns false if it was already gone. */
+export async function releaseRegistration(db: D1Database, cohort: string, githubId: string): Promise<boolean> {
+  const result = await db.prepare('DELETE FROM registrations WHERE cohort = ? AND github_id = ?').bind(cohort, githubId).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function updateRegistrationStudentId(db: D1Database, cohort: string, githubId: string, studentId: string): Promise<boolean> {
+  const result = await db.prepare('UPDATE registrations SET student_id = ?, updated_at = ? WHERE cohort = ? AND github_id = ?').bind(studentId, new Date().toISOString(), cohort, githubId).run();
+  return (result.meta.changes ?? 0) > 0;
+}

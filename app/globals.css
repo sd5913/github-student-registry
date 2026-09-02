@@ -45,6 +45,35 @@ h1 { font-size:clamp(58px,8vw,122px); line-height:.87; letter-spacing:-.055em; f
 .id-affix { font-family:var(--font-mono),monospace; font-size:19px; letter-spacing:.42em; text-indent:.42em; color:#b9bdc2; user-select:none; }
 .student-id-field > .id-affix:last-child { color:var(--ink); letter-spacing:normal; text-indent:0; }
 .form-error { font-size:12px; color:#b42318; background:#fff1ef; padding:10px 12px; margin:-8px 0 16px; } .student-form button:disabled { opacity:.6; cursor:wait; }
+.admin-shell { width:min(100%,1080px); margin:0 auto; padding:44px clamp(20px,4vw,56px) 72px; }
+.admin-head { border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:26px; }
+.admin-title { font-size:26px; line-height:1.15; margin:0 0 6px; max-width:none; letter-spacing:-.02em; }
+.admin-count { margin:0 0 14px; font-size:13px; } .admin-muted { color:var(--muted); }
+.admin-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.admin-chip { font-family:var(--font-mono),monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:7px 11px; border:1px solid var(--line); color:var(--ink); text-decoration:none; }
+.admin-chip:hover { border-color:var(--ink); } .admin-chip.current { background:var(--ink); color:#fff; border-color:var(--ink); }
+.admin-section { font-size:11px; font-family:var(--font-mono),monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:30px 0 12px; }
+.admin-table { width:100%; border-collapse:collapse; font-size:13px; }
+.admin-table th { text-align:left; font-size:9px; font-family:var(--font-mono),monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:400; padding:0 10px 8px 0; border-bottom:1px solid var(--line); }
+.admin-table td { padding:9px 10px 9px 0; border-bottom:1px solid var(--line); vertical-align:middle; }
+.admin-table tr:hover td { background:var(--soft); }
+.admin-id { font-family:var(--font-mono),monospace; font-weight:700; letter-spacing:.04em; }
+.admin-table a { color:var(--ink); text-underline-offset:3px; }
+.admin-row-actions { display:flex; gap:6px; justify-content:flex-end; }
+.admin-row-actions button { min-height:30px; padding:0 11px; font-size:11px; font-weight:700; border:1px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+.admin-row-actions button.quiet { background:transparent; color:var(--ink); border-color:var(--line); }
+.admin-row-actions button.quiet:hover { border-color:var(--ink); }
+.admin-row-actions button.danger:hover { border-color:#b42318; color:#b42318; }
+.admin-row-actions button:disabled { opacity:.45; cursor:not-allowed; }
+.admin-edit { width:74px; height:30px; border:1px solid var(--ink); padding:0 8px; font-family:var(--font-mono),monospace; font-size:13px; letter-spacing:.12em; }
+.admin-copy { display:inline-flex; align-items:center; gap:8px; margin-top:16px; min-height:38px; padding:0 14px; background:transparent; border:1px solid var(--line); font-size:12px; font-weight:700; cursor:pointer; }
+.admin-copy:hover { border-color:var(--ink); }
+.admin-missing { display:flex; flex-wrap:wrap; gap:6px; margin:0; }
+.admin-missing span { font-family:var(--font-mono),monospace; font-size:12px; padding:5px 9px; background:var(--soft); color:var(--muted); }
+.admin-empty { font-size:13px; color:var(--muted); margin:0; }
+.admin-footnote { margin-top:34px; padding-top:16px; border-top:1px solid var(--line); font-size:11px; color:var(--muted); }
+.admin-shell .github-button { width:auto; display:inline-flex; margin-top:14px; }
+@media(max-width:640px) { .admin-table th:nth-child(3), .admin-table td:nth-child(3), .admin-table th:nth-child(4), .admin-table td:nth-child(4) { display:none; } }
 .text-link { display:block; text-align:center; color:var(--muted); text-decoration:underline; text-underline-offset:3px; font-size:11px; margin-top:18px; }
 footer { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 clamp(20px,4vw,56px); color:#fff9; background:var(--ink); }
 @media(max-width:820px) { .registration-section { grid-template-columns:1fr; } .registration-section::before { inset:0 0 auto; height:56%; border-right:0; border-bottom:1px solid var(--line); } .intro-column { padding:58px 32px 54px; } .form-column { padding:54px 20px 64px; } .marginalia { display:none; } h1 { max-width:none; } }

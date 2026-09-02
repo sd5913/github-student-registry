@@ -4,6 +4,7 @@ export type AppEnv = {
   GITHUB_CLIENT_SECRET?: string;
   SESSION_SECRET?: string;
   ADMIN_TOKEN?: string;
+  ADMIN_LOGINS?: string;
 };
 
 export function required(value: string | undefined, name: string): string {

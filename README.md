@@ -15,6 +15,15 @@ A Cloudflare Worker that lets students authenticate with GitHub and match that a
 
 You need Node 22+, a Cloudflare account, and a GitHub OAuth App.
 
+The quickest path is the guided script. It creates the D1 database, writes `.env`, builds, applies migrations, stores the four Worker secrets, and prints the values you need for GitHub:
+
+```bash
+npx wrangler login
+./scripts/setup-cloudflare.sh
+```
+
+It is safe to re-run; an existing database is reused rather than duplicated. To do the same steps by hand:
+
 1. Install and authenticate:
 
    ```bash
@@ -82,16 +91,49 @@ Never commit `.env`, `.dev.vars`, OAuth secrets, or admin tokens.
 
 The `Deploy to Cloudflare` workflow runs on every push to `main` and can also be started manually. It checks the code, builds the Worker, applies pending D1 migrations, and deploys.
 
-Create a GitHub environment named `production`, then add:
+### Find your account ID
+
+Open the [Workers & Pages dashboard](https://dash.cloudflare.com/?to=/:account/workers) and copy **Account ID** from the right-hand sidebar. It is a 32-character hex string. The account ID is an identifier, not a credential, but there is no reason to publish it.
+
+From the terminal, `npx wrangler whoami` prints the same value.
+
+### Create the API token
+
+1. Go to [My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens) and choose **Create Token**.
+2. Scroll to **Custom token** and choose **Get started**. The `Edit Cloudflare Workers` template does not include D1, so a custom token is the correct choice here.
+3. Give it a recognisable name, for example `sd5913-registry-deploy`.
+4. Add exactly these permissions:
+
+   | Type | Resource | Access |
+   | --- | --- | --- |
+   | Account | Workers Scripts | Edit |
+   | Account | D1 | Edit |
+
+5. Under **Account Resources**, select **Include** and then the single account you deploy to. Leave **Zone Resources** unset.
+6. Optionally restrict **TTL** to the length of the semester.
+7. **Continue to summary**, then **Create Token**.
+8. Copy the token now. Cloudflare shows it exactly once.
+
+The token can deploy Workers and write to every D1 database on that account, so treat it as a credential: paste it straight into GitHub and do not store it in a file, a chat message, or the repository.
+
+### Add the secrets and variables
+
+Create a GitHub environment named `production` under **Settings → Environments → New environment**, then add:
 
 | Type | Name | Value |
 | --- | --- | --- |
-| Environment secret | `CLOUDFLARE_API_TOKEN` | A scoped Cloudflare API token with Workers and D1 edit access |
-| Environment secret | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+| Environment secret | `CLOUDFLARE_API_TOKEN` | The token created above |
+| Environment secret | `CLOUDFLARE_ACCOUNT_ID` | Your 32-character account ID |
 | Environment variable | `CLOUDFLARE_D1_DATABASE_ID` | The ID returned by `wrangler d1 create` |
 | Environment variable | `NEXT_PUBLIC_SITE_URL` | The final HTTPS URL, without a trailing slash |
 
+Secrets go under **Environment secrets** and variables under **Environment variables**; the workflow reads them as `secrets.*` and `vars.*` respectively, so a value added in the wrong place fails the `Verify configuration` step.
+
 The GitHub OAuth credentials and `SESSION_SECRET` / `ADMIN_TOKEN` remain Cloudflare Worker secrets. Add them once using the commands in the first-time setup section; the deployment workflow does not copy application secrets through GitHub.
+
+### Rotating or revoking
+
+Roll the API token at [API Tokens](https://dash.cloudflare.com/profile/api-tokens) with **Roll** and update the `CLOUDFLARE_API_TOKEN` secret, or **Delete** it to cut off deployment access immediately. Rotate a Worker secret by running `wrangler secret put` again with the new value; the change takes effect on the next request without a redeploy.
 
 ## Export the class list
 

@@ -78,6 +78,21 @@ npm start
 
 Never commit `.env`, `.dev.vars`, OAuth secrets, or admin tokens.
 
+## Automatic deployment from GitHub
+
+The `Deploy to Cloudflare` workflow runs on every push to `main` and can also be started manually. It checks the code, builds the Worker, applies pending D1 migrations, and deploys.
+
+Create a GitHub environment named `production`, then add:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| Environment secret | `CLOUDFLARE_API_TOKEN` | A scoped Cloudflare API token with Workers and D1 edit access |
+| Environment secret | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+| Environment variable | `CLOUDFLARE_D1_DATABASE_ID` | The ID returned by `wrangler d1 create` |
+| Environment variable | `NEXT_PUBLIC_SITE_URL` | The final HTTPS URL, without a trailing slash |
+
+The GitHub OAuth credentials and `SESSION_SECRET` / `ADMIN_TOKEN` remain Cloudflare Worker secrets. Add them once using the commands in the first-time setup section; the deployment workflow does not copy application secrets through GitHub.
+
 ## Export the class list
 
 Keep `ADMIN_TOKEN` private. Download a spreadsheet-ready CSV with:

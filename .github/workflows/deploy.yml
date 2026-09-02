@@ -1,0 +1,61 @@
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, migrate, and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify configuration
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing production secret: CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing production secret: CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          test -n "$CLOUDFLARE_D1_DATABASE_ID" || { echo "Missing production variable: CLOUDFLARE_D1_DATABASE_ID"; exit 1; }
+          test -n "$NEXT_PUBLIC_SITE_URL" || { echo "Missing production variable: NEXT_PUBLIC_SITE_URL"; exit 1; }
+
+      - name: Check source
+        run: |
+          npm run lint
+          npx tsc --noEmit
+
+      - name: Build Worker
+        run: npm run build
+
+      - name: Apply D1 migrations
+        run: npx wrangler d1 migrations apply DB --remote --config dist/server/wrangler.json
+
+      - name: Deploy Worker
+        run: npx wrangler deploy --config dist/server/wrangler.json

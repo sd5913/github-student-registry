@@ -15,7 +15,7 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local --config dist/server/wrangler.json --persist-to .wrangler/state",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config dist/server/wrangler.json",
     "deploy": "npm run build && wrangler deploy --config dist/server/wrangler.json",
-    "test": "node --experimental-strip-types --test lib/student-id.test.ts lib/admin.test.ts lib/survey.test.ts",
+    "test": "node --experimental-strip-types --test lib/student-id.test.ts lib/admin.test.ts lib/survey.test.ts lib/survey-summary.test.ts",
     "roster:seed": "node --experimental-strip-types scripts/seed-roster.mjs"
   },
   "dependencies": {

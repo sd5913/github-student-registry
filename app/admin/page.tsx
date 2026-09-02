@@ -56,6 +56,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
             {cohorts.length > 1 && cohorts.map((year) => (
               <Link key={year} href={`/admin?cohort=${year}`} className={year === cohort ? 'admin-chip current' : 'admin-chip'}>{year}</Link>
             ))}
+            <Link className="admin-chip" href={`/admin/live?cohort=${cohort}`}>Live board</Link>
             <a className="admin-chip" href={`/api/admin/registrations?cohort=${cohort}&format=csv`}>Download CSV</a>
           </div>
         </div>

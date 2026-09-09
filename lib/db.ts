@@ -10,9 +10,13 @@ export type Registration = {
   cohort: string;
   createdAt: string;
   updatedAt: string;
+  /** When an instructor confirmed work handed in from this account; null until then. */
+  verifiedAt: string | null;
+  /** The submitted repository that proved the match. */
+  verifiedRepo: string | null;
 };
 
-const COLUMNS = `github_id AS githubId, github_login AS githubLogin, github_name AS githubName, github_avatar_url AS githubAvatarUrl, student_id AS studentId, cohort, created_at AS createdAt, updated_at AS updatedAt`;
+const COLUMNS = `github_id AS githubId, github_login AS githubLogin, github_name AS githubName, github_avatar_url AS githubAvatarUrl, student_id AS studentId, cohort, created_at AS createdAt, updated_at AS updatedAt, verified_at AS verifiedAt, verified_repo AS verifiedRepo`;
 
 export async function getRegistration(db: D1Database, cohort: string, githubId: string): Promise<Registration | null> {
   const row = await db.prepare(`SELECT ${COLUMNS} FROM registrations WHERE cohort = ? AND github_id = ?`).bind(cohort, githubId).first<Registration>();
@@ -54,6 +58,33 @@ export async function releaseRegistration(db: D1Database, cohort: string, github
 export async function updateRegistrationStudentId(db: D1Database, cohort: string, githubId: string, studentId: string): Promise<boolean> {
   const result = await db.prepare('UPDATE registrations SET student_id = ?, updated_at = ? WHERE cohort = ? AND github_id = ?').bind(studentId, new Date().toISOString(), cohort, githubId).run();
   return (result.meta.changes ?? 0) > 0;
+}
+
+/**
+ * Mark a registration as proven by a submission, or clear it. Verification is
+ * an instructor's statement about the account, so it survives the student
+ * re-saving their ID; only `releaseRegistration` removes it.
+ */
+export async function setVerification(db: D1Database, cohort: string, githubId: string, repo: string | null, verified: boolean): Promise<boolean> {
+  const result = verified
+    ? await db.prepare('UPDATE registrations SET verified_at = ?, verified_repo = ? WHERE cohort = ? AND github_id = ?').bind(new Date().toISOString(), repo, cohort, githubId).run()
+    : await db.prepare('UPDATE registrations SET verified_at = NULL, verified_repo = NULL WHERE cohort = ? AND github_id = ?').bind(cohort, githubId).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/**
+ * Verify by login, the form the submission checker prints. Returns the logins
+ * that matched a registration; anything else was never registered, which is
+ * itself the finding — a student handing in from an account they did not match.
+ */
+export async function verifyByLogin(db: D1Database, cohort: string, entries: { login: string; repo: string | null }[]): Promise<string[]> {
+  const now = new Date().toISOString();
+  const done: string[] = [];
+  for (const entry of entries) {
+    const result = await db.prepare('UPDATE registrations SET verified_at = ?, verified_repo = COALESCE(?, verified_repo) WHERE cohort = ? AND github_login = ? COLLATE NOCASE').bind(now, entry.repo, cohort, entry.login).run();
+    if ((result.meta.changes ?? 0) > 0) done.push(entry.login);
+  }
+  return done;
 }
 
 export type SurveyAnswers = Partial<Record<SurveyField, string | null>> & { goal?: string | null };

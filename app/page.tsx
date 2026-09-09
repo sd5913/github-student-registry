@@ -1,9 +1,10 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { env } from 'cloudflare:workers';
-import { ArrowRight, Check, LockKeyhole } from 'lucide-react';
+import { ArrowRight, Check, ExternalLink, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { CURRENT_COHORT } from '@/lib/cohort';
 import { getRegistration, getSurvey } from '@/lib/db';
+import { COURSE_LINKS } from '@/lib/links';
 import { readSession } from '@/lib/session';
 import { RegistrationForm } from './registration-form';
 import { SurveyForm } from './survey-form';
@@ -19,6 +20,7 @@ export default async function Home() {
   const session = await readSession(cookieStore.get('sd5913_session')?.value);
   const registration = session ? await getRegistration(env.DB, CURRENT_COHORT, session.githubId) : null;
   const survey = session && registration ? await getSurvey(env.DB, CURRENT_COHORT, session.githubId) : null;
+  const verified = registration?.verifiedAt != null;
 
   return (
     <main className="site-shell">
@@ -44,9 +46,9 @@ export default async function Home() {
               <span>{registration ? <Check size={16} /> : '02'}</span>
               <div><strong>Add student ID</strong><small>Just the last four digits of your PolyU ID.</small></div>
             </li>
-            <li className={registration ? 'active' : ''}>
-              <span>03</span>
-              <div><strong>You’re matched</strong><small>Then tell us where you’re starting from, so we pitch this right.</small></div>
+            <li className={verified ? 'done' : registration ? 'active' : ''}>
+              <span>{verified ? <Check size={16} /> : '03'}</span>
+              <div><strong>Hand something in</strong><small>Assignment 1 from this account proves the match and unlocks the course links here.</small></div>
             </li>
           </ol>
         </div>
@@ -64,12 +66,41 @@ export default async function Home() {
                 <a className="github-button" href="/api/auth/github"><GitHubMark />Continue with GitHub<ArrowRight className="button-arrow" aria-hidden="true" size={18} /></a>
                 <div className="privacy-note"><LockKeyhole size={15} aria-hidden="true" />Public profile access only · no repository permissions</div>
               </>
+            ) : registration && verified ? (
+              <>
+                <p className="eyebrow success-label">VERIFIED</p>
+                <div className="success-mark"><ShieldCheck size={30} /></div>
+                <h2 id="card-title">This is your course.</h2>
+                <p className="card-copy"><strong>@{session.login}</strong> is student <strong>{registration.studentId}</strong>, confirmed by the work you handed in{registration.verifiedRepo && <>: <a className="inline-link" href={registration.verifiedRepo} target="_blank" rel="noreferrer">{registration.verifiedRepo.replace('https://github.com/', '')}</a></>}.</p>
+                <ul className="hub" aria-label="Course links">
+                  {COURSE_LINKS.map((link) => (
+                    <li key={link.href}>
+                      <a href={link.href} target="_blank" rel="noreferrer"><strong>{link.label}</strong><ExternalLink size={14} aria-hidden="true" /></a>
+                      <small>{link.note}</small>
+                    </li>
+                  ))}
+                </ul>
+                <details className="hub-details">
+                  <summary>Change your student ID or answer the survey</summary>
+                  <RegistrationForm login={session.login} avatarUrl={session.avatarUrl} initialStudentId={registration.studentId} isUpdate />
+                  <SurveyForm
+                    initial={{ experience: survey?.experience ?? null, terminal: survey?.terminal ?? null, agentUse: survey?.agentUse ?? null, agentTools: survey?.agentTools ?? null, machine: survey?.machine ?? null, interest: survey?.interest ?? null }}
+                    initialGoal={survey?.goal ?? ''}
+                    answered={survey !== null}
+                  />
+                </details>
+                {/* oxlint-disable-next-line next/no-html-link-for-pages */}
+                <a className="text-link" href="/api/auth/logout">Use a different GitHub account</a>
+              </>
             ) : registration ? (
               <>
                 <p className="eyebrow success-label">MATCH COMPLETE</p>
                 <div className="success-mark"><Check size={30} /></div>
                 <h2 id="card-title">You’re on the list.</h2>
                 <p className="card-copy"><strong>@{session.login}</strong> is matched to student ID <strong>{registration.studentId}</strong>.</p>
+                <p className="card-copy hub-pending">
+                  <strong>Next:</strong> hand in Assignment 1 on Canvas as a public repository on <strong>this</strong> account. Once it has been checked, this page becomes your way into the course: the organisation invitation, the repository, the slides.
+                </p>
                 <RegistrationForm login={session.login} avatarUrl={session.avatarUrl} initialStudentId={registration.studentId} isUpdate />
                 <SurveyForm
                   initial={{ experience: survey?.experience ?? null, terminal: survey?.terminal ?? null, agentUse: survey?.agentUse ?? null, agentTools: survey?.agentTools ?? null, machine: survey?.machine ?? null, interest: survey?.interest ?? null }}

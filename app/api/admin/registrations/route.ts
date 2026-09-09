@@ -2,10 +2,11 @@ import { cookies } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { isAdminLogin } from '@/lib/admin';
 import { CURRENT_COHORT, isKnownCohort, isOnRoster } from '@/lib/cohort';
-import { listRegistrations, listSurveys, releaseRegistration, updateRegistrationStudentId } from '@/lib/db';
+import { listRegistrations, listSurveys, releaseRegistration, setVerification, updateRegistrationStudentId, verifyByLogin } from '@/lib/db';
 import { required, type AppEnv } from '@/lib/env';
 import { readSession } from '@/lib/session';
 import { normalizeStudentId, STUDENT_ID } from '@/lib/student-id';
+import { normalizeRepo, parseVerifyList } from '@/lib/verify';
 
 /**
  * Either credential works: the bearer token for scripts and `curl`, or an
@@ -39,10 +40,10 @@ export async function GET(request: Request) {
   const surveyFor = (row: { cohort: string; githubId: string }) => surveys.get(cohort === null ? `${row.cohort}:${row.githubId}` : row.githubId);
 
   if (new URL(request.url).searchParams.get('format') === 'csv') {
-    const header = ['cohort', 'student_id', 'github_login', 'github_id', 'github_name', 'github_url', 'created_at', 'updated_at', 'experience', 'terminal', 'agent_use', 'agent_tools', 'machine', 'interest', 'goal'];
+    const header = ['cohort', 'student_id', 'github_login', 'github_id', 'github_name', 'github_url', 'created_at', 'updated_at', 'verified_at', 'verified_repo', 'experience', 'terminal', 'agent_use', 'agent_tools', 'machine', 'interest', 'goal'];
     const rows = registrations.map((row) => {
       const survey = surveyFor(row);
-      return [row.cohort, row.studentId, row.githubLogin, row.githubId, row.githubName, `https://github.com/${row.githubLogin}`, row.createdAt, row.updatedAt, survey?.experience ?? null, survey?.terminal ?? null, survey?.agentUse ?? null, survey?.agentTools ?? null, survey?.machine ?? null, survey?.interest ?? null, survey?.goal ?? null].map(csvCell).join(',');
+      return [row.cohort, row.studentId, row.githubLogin, row.githubId, row.githubName, `https://github.com/${row.githubLogin}`, row.createdAt, row.updatedAt, row.verifiedAt, row.verifiedRepo, survey?.experience ?? null, survey?.terminal ?? null, survey?.agentUse ?? null, survey?.agentTools ?? null, survey?.machine ?? null, survey?.interest ?? null, survey?.goal ?? null].map(csvCell).join(',');
     });
     const filename = `sd5913-${cohort ?? 'all'}-github-students.csv`;
     return new Response([header.join(','), ...rows].join('\n'), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${filename}"`, 'cache-control': 'no-store' } });
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
   }, { headers: { 'cache-control': 'no-store' } });
 }
 
-type Action = { action?: unknown; cohort?: unknown; githubId?: unknown; studentId?: unknown };
+type Action = { action?: unknown; cohort?: unknown; githubId?: unknown; studentId?: unknown; repo?: unknown; list?: unknown };
 
 /** Instructor corrections: free a wrongly claimed ID, or fix one in place. */
 export async function POST(request: Request) {
@@ -67,8 +68,29 @@ export async function POST(request: Request) {
   try { body = await request.json() as Action; }
   catch { return Response.json({ error: 'Invalid request.' }, { status: 400 }); }
   const cohort = typeof body.cohort === 'string' && body.cohort ? body.cohort : CURRENT_COHORT;
+
+  // Bulk verification: the pasted output of check_submissions.py. Reports
+  // what did not match so an unregistered submitter is noticed, not lost.
+  if (body.action === 'verify-many') {
+    const entries = parseVerifyList(typeof body.list === 'string' ? body.list : '');
+    if (entries.length === 0) return Response.json({ error: 'Paste one GitHub login per line, with the submitted repository after it.' }, { status: 400 });
+    const verified = await verifyByLogin(env.DB, cohort, entries);
+    const done = new Set(verified.map((login) => login.toLowerCase()));
+    const unmatched = entries.map((entry) => entry.login).filter((login) => !done.has(login.toLowerCase()));
+    return Response.json({ ok: true, verified, unmatched });
+  }
+
   const githubId = typeof body.githubId === 'string' ? body.githubId : '';
   if (!githubId) return Response.json({ error: 'Which registration?' }, { status: 400 });
+
+  if (body.action === 'verify' || body.action === 'unverify') {
+    const raw = typeof body.repo === 'string' ? body.repo.trim() : '';
+    const repo = raw ? normalizeRepo(raw) : null;
+    if (raw && !repo) return Response.json({ error: 'That is not a GitHub repository URL.' }, { status: 400 });
+    const changed = await setVerification(env.DB, cohort, githubId, repo, body.action === 'verify');
+    if (!changed) return Response.json({ error: 'That registration no longer exists.' }, { status: 404 });
+    return Response.json({ ok: true });
+  }
 
   if (body.action === 'release') {
     const released = await releaseRegistration(env.DB, cohort, githubId);

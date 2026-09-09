@@ -175,6 +175,22 @@ registered yet, and a CSV download. From there you can release a registration
 correct a student ID in place. An edited ID is checked against the roster and
 refused if another account already holds it.
 
+### Verifying a registration
+
+A registration is a claim: this GitHub account says it belongs to this student
+ID. It becomes a fact once the student hands in work from that account, so
+`/admin` lets an instructor **verify** a row, by hand or by pasting a list of
+`login repository-url` lines (the SD5913 admin workspace's
+`scripts/check_submissions.py` prints one). The repository that proved the
+match is kept and shown to the student.
+
+Verification is what unlocks the course on the home page: a verified student
+sees the organisation invitation, the course repository, the slides and the
+setup link in one place, and the **Copy … verified logins** button feeds the
+org invite. An unverified registration is told what to hand in and from which
+account. Releasing a registration clears its verification; editing the ID
+keeps it.
+
 Access is granted by the `ADMIN_LOGINS` Worker secret, a comma-separated list
 of GitHub logins:
 
@@ -199,7 +215,7 @@ curl -fsS \
   -o sd5913-github-students.csv
 ```
 
-Remove `?format=csv` for JSON. The export includes student ID, GitHub login and numeric ID, profile URL, name, and timestamps.
+Remove `?format=csv` for JSON. The export includes student ID, GitHub login and numeric ID, profile URL, name, timestamps, and, once verified, the verification time and the repository that proved the match.
 
 ## Security
 

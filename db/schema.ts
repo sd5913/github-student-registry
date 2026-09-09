@@ -24,6 +24,11 @@ export const registrations = sqliteTable(
     cohort: text('cohort').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    // Set by an instructor once the student has handed in work from this
+    // account, so the match is proven rather than claimed. The repo is the
+    // submission that proved it. Unlocks the course links on the home page.
+    verifiedAt: text('verified_at'),
+    verifiedRepo: text('verified_repo'),
   },
   // Scoped to the cohort: a student who takes the unit again next year gets a
   // second row, and this year's records stay as they were.

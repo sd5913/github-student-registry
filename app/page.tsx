@@ -36,7 +36,7 @@ export default async function Home() {
         <div className="intro-column">
           <p className="eyebrow">POLYU SCHOOL OF DESIGN · SD5913</p>
           <h1>Match your <span>work</span>.</h1>
-          <p className="lede">Connect the GitHub account you use for coursework to your student ID. One quick check now means every submission lands with the right name later.</p>
+          <p className="lede">Connect the GitHub account you use for coursework to your student ID. Once you have handed in work from that account, this page becomes your way into the course: the organisation, the repository, the slides.</p>
           <ol className="steps" aria-label="Registration steps">
             <li className={session ? 'done' : 'active'}>
               <span>{session ? <Check size={16} /> : '01'}</span>
@@ -60,7 +60,7 @@ export default async function Home() {
               <>
                 <p className="eyebrow">STEP 01 · AUTHENTICATE</p>
                 <h2 id="card-title">Start with GitHub.</h2>
-                <p className="card-copy">Use the same account where you push your homework. We never receive your password or request access to private repos.</p>
+                <p className="card-copy">Use the same account where you push your homework. We never receive your password or request access to private repos. Already registered and handed in? Sign in to find your course links.</p>
                 {/* OAuth must start with a top-level browser navigation. */}
                 {/* oxlint-disable-next-line next/no-html-link-for-pages */}
                 <a className="github-button" href="/api/auth/github"><GitHubMark />Continue with GitHub<ArrowRight className="button-arrow" aria-hidden="true" size={18} /></a>

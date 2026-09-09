@@ -133,3 +133,37 @@ export async function listSurveys(db: D1Database, cohort: string | null): Promis
   const result = await statement.all<SurveyRow & { cohort?: string }>();
   return new Map(result.results.map((row) => [cohort === null ? `${row.cohort}:${row.githubId}` : row.githubId, row]));
 }
+
+export type Submission = { assignment: string; studentId: string; url: string; owner: string | null; importedAt: string };
+
+const SUBMISSION_COLUMNS = `assignment, student_id AS studentId, url, owner, imported_at AS importedAt`;
+
+/** Replace what Canvas has for these students on one assignment. Later imports win. */
+export async function upsertSubmissions(db: D1Database, cohort: string, assignment: string, entries: { studentId: string; url: string; owner: string | null }[]): Promise<number> {
+  const now = new Date().toISOString();
+  let n = 0;
+  for (const entry of entries) {
+    await db.prepare(
+      `INSERT INTO submissions (cohort, assignment, student_id, url, owner, imported_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(cohort, assignment, student_id) DO UPDATE SET url = excluded.url, owner = excluded.owner, imported_at = excluded.imported_at`,
+    ).bind(cohort, assignment, entry.studentId, entry.url, entry.owner, now).run();
+    n += 1;
+  }
+  return n;
+}
+
+export async function listSubmissions(db: D1Database, cohort: string): Promise<Submission[]> {
+  const result = await db.prepare(`SELECT ${SUBMISSION_COLUMNS} FROM submissions WHERE cohort = ? ORDER BY assignment, student_id`).bind(cohort).all<Submission>();
+  return result.results;
+}
+
+export async function listSubmissionsForStudent(db: D1Database, cohort: string, studentId: string): Promise<Submission[]> {
+  const result = await db.prepare(`SELECT ${SUBMISSION_COLUMNS} FROM submissions WHERE cohort = ? AND student_id = ? ORDER BY assignment`).bind(cohort, studentId).all<Submission>();
+  return result.results;
+}
+
+/** Add one ID to a cohort's roster — a late enrolment, or a test account. */
+export async function addRosterId(db: D1Database, cohort: string, studentId: string): Promise<boolean> {
+  const result = await db.prepare('INSERT OR IGNORE INTO cohort_roster (cohort, student_id) VALUES (?, ?)').bind(cohort, studentId).run();
+  return (result.meta.changes ?? 0) > 0;
+}

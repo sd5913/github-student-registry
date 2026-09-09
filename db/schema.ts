@@ -62,3 +62,21 @@ export const surveyResponses = sqliteTable(
   },
   (table) => [uniqueIndex('idx_survey_cohort_github_id').on(table.cohort, table.githubId)],
 );
+
+// What Canvas received for each assignment, imported by an instructor from the
+// submission list. Keyed by student ID because that is what Canvas knows; the
+// repository owner is parsed from the URL so it can be compared with the GitHub
+// login the student registered. A mismatch is the finding this table exists for.
+export const submissions = sqliteTable(
+  'submissions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    cohort: text('cohort').notNull(),
+    assignment: text('assignment').notNull(),
+    studentId: text('student_id').notNull(),
+    url: text('url').notNull(),
+    owner: text('owner'),
+    importedAt: text('imported_at').notNull(),
+  },
+  (table) => [uniqueIndex('idx_submissions_cohort_assignment_student').on(table.cohort, table.assignment, table.studentId)],
+);

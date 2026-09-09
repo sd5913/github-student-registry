@@ -2,11 +2,12 @@ import { cookies } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { isAdminLogin } from '@/lib/admin';
 import { CURRENT_COHORT, isKnownCohort, isOnRoster } from '@/lib/cohort';
-import { listRegistrations, listSurveys, releaseRegistration, setVerification, updateRegistrationStudentId, verifyByLogin } from '@/lib/db';
+import { addRosterId, listRegistrations, listSubmissions, listSurveys, releaseRegistration, setVerification, updateRegistrationStudentId, upsertSubmissions, verifyByLogin } from '@/lib/db';
 import { required, type AppEnv } from '@/lib/env';
 import { readSession } from '@/lib/session';
 import { normalizeStudentId, STUDENT_ID } from '@/lib/student-id';
 import { normalizeRepo, parseVerifyList } from '@/lib/verify';
+import { parseSubmissionList, submissionStatus } from '@/lib/submissions';
 
 /**
  * Either credential works: the bearer token for scripts and `curl`, or an
@@ -37,13 +38,21 @@ export async function GET(request: Request) {
   // Joined in the export rather than the query: the survey is optional, so a
   // LEFT JOIN would only move the null handling into SQL.
   const surveys = await listSurveys(env.DB, cohort);
+  // Assignment 1 as Canvas has it, against the registration: one url and one verdict per row.
+  const submissions = cohort === null ? [] : await listSubmissions(env.DB, cohort);
+  const byLogin = new Map(registrations.map((row) => [row.githubLogin.toLowerCase(), row.studentId]));
+  const a1For = (row: { studentId: string; githubLogin: string }) => {
+    const sub = submissions.find((s) => s.assignment === '1' && s.studentId === row.studentId);
+    if (!sub) return { url: null, status: null };
+    return { url: sub.url, status: submissionStatus(sub, row.githubLogin, (login) => byLogin.get(login.toLowerCase()) ?? null).kind };
+  };
   const surveyFor = (row: { cohort: string; githubId: string }) => surveys.get(cohort === null ? `${row.cohort}:${row.githubId}` : row.githubId);
 
   if (new URL(request.url).searchParams.get('format') === 'csv') {
-    const header = ['cohort', 'student_id', 'github_login', 'github_id', 'github_name', 'github_url', 'created_at', 'updated_at', 'verified_at', 'verified_repo', 'experience', 'terminal', 'agent_use', 'agent_tools', 'machine', 'interest', 'goal'];
+    const header = ['cohort', 'student_id', 'github_login', 'github_id', 'github_name', 'github_url', 'created_at', 'updated_at', 'verified_at', 'verified_repo', 'a1_url', 'a1_status', 'experience', 'terminal', 'agent_use', 'agent_tools', 'machine', 'interest', 'goal'];
     const rows = registrations.map((row) => {
       const survey = surveyFor(row);
-      return [row.cohort, row.studentId, row.githubLogin, row.githubId, row.githubName, `https://github.com/${row.githubLogin}`, row.createdAt, row.updatedAt, row.verifiedAt, row.verifiedRepo, survey?.experience ?? null, survey?.terminal ?? null, survey?.agentUse ?? null, survey?.agentTools ?? null, survey?.machine ?? null, survey?.interest ?? null, survey?.goal ?? null].map(csvCell).join(',');
+      return [row.cohort, row.studentId, row.githubLogin, row.githubId, row.githubName, `https://github.com/${row.githubLogin}`, row.createdAt, row.updatedAt, row.verifiedAt, row.verifiedRepo, a1For(row).url, a1For(row).status, survey?.experience ?? null, survey?.terminal ?? null, survey?.agentUse ?? null, survey?.agentTools ?? null, survey?.machine ?? null, survey?.interest ?? null, survey?.goal ?? null].map(csvCell).join(',');
     });
     const filename = `sd5913-${cohort ?? 'all'}-github-students.csv`;
     return new Response([header.join(','), ...rows].join('\n'), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${filename}"`, 'cache-control': 'no-store' } });
@@ -52,11 +61,11 @@ export async function GET(request: Request) {
     cohort: requested,
     count: registrations.length,
     surveyCount: surveys.size,
-    registrations: registrations.map((row) => ({ ...row, survey: surveyFor(row) ?? null })),
+    registrations: registrations.map((row) => ({ ...row, assignment1: a1For(row), survey: surveyFor(row) ?? null })),
   }, { headers: { 'cache-control': 'no-store' } });
 }
 
-type Action = { action?: unknown; cohort?: unknown; githubId?: unknown; studentId?: unknown; repo?: unknown; list?: unknown };
+type Action = { action?: unknown; cohort?: unknown; githubId?: unknown; studentId?: unknown; repo?: unknown; list?: unknown; assignment?: unknown };
 
 /** Instructor corrections: free a wrongly claimed ID, or fix one in place. */
 export async function POST(request: Request) {
@@ -78,6 +87,27 @@ export async function POST(request: Request) {
     const done = new Set(verified.map((login) => login.toLowerCase()));
     const unmatched = entries.map((entry) => entry.login).filter((login) => !done.has(login.toLowerCase()));
     return Response.json({ ok: true, verified, unmatched });
+  }
+
+  // What Canvas received: `student_id url` lines. Stored as given; the verdict
+  // is computed against the registrations whenever it is shown.
+  if (body.action === 'import-submissions') {
+    const assignment = typeof body.assignment === 'string' && /^\d{1,2}$/.test(body.assignment) ? body.assignment : '';
+    if (!assignment) return Response.json({ error: 'Which assignment?' }, { status: 400 });
+    const entries = parseSubmissionList(typeof body.list === 'string' ? body.list : '');
+    if (entries.length === 0) return Response.json({ error: 'Paste one line per student: the student ID, then the submitted URL.' }, { status: 400 });
+    const unknown: string[] = [];
+    for (const entry of entries) if (!await isOnRoster(env.DB, cohort, entry.studentId)) unknown.push(entry.studentId);
+    const imported = await upsertSubmissions(env.DB, cohort, assignment, entries.filter((entry) => !unknown.includes(entry.studentId)));
+    return Response.json({ ok: true, imported, unknown });
+  }
+
+  // A late enrolment or a test account. Held to the same ID shape as the roster file.
+  if (body.action === 'roster-add') {
+    const studentId = typeof body.studentId === 'string' ? normalizeStudentId(body.studentId) : '';
+    if (!STUDENT_ID.test(studentId)) return Response.json({ error: 'Enter the last four digits of the student ID.' }, { status: 400 });
+    const added = await addRosterId(env.DB, cohort, studentId);
+    return Response.json({ ok: true, added });
   }
 
   const githubId = typeof body.githubId === 'string' ? body.githubId : '';

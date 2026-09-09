@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { env } from 'cloudflare:workers';
-import { ArrowRight, Check, ExternalLink, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check, ExternalLink, LockKeyhole } from 'lucide-react';
 import { CURRENT_COHORT } from '@/lib/cohort';
-import { getRegistration, getSurvey } from '@/lib/db';
-import { COURSE_LINKS } from '@/lib/links';
+import { getRegistration, getSurvey, listSubmissionsForStudent } from '@/lib/db';
+import { ASSIGNMENTS, COURSE_LINKS } from '@/lib/links';
+import { describe, submissionStatus } from '@/lib/submissions';
 import { readSession } from '@/lib/session';
 import { RegistrationForm } from './registration-form';
 import { SurveyForm } from './survey-form';
@@ -20,7 +21,7 @@ export default async function Home() {
   const session = await readSession(cookieStore.get('sd5913_session')?.value);
   const registration = session ? await getRegistration(env.DB, CURRENT_COHORT, session.githubId) : null;
   const survey = session && registration ? await getSurvey(env.DB, CURRENT_COHORT, session.githubId) : null;
-  const verified = registration?.verifiedAt != null;
+  const submissions = session && registration ? await listSubmissionsForStudent(env.DB, CURRENT_COHORT, registration.studentId) : [];
 
   return (
     <main className="site-shell">
@@ -36,7 +37,7 @@ export default async function Home() {
         <div className="intro-column">
           <p className="eyebrow">POLYU SCHOOL OF DESIGN · SD5913</p>
           <h1>Match your <span>work</span>.</h1>
-          <p className="lede">Connect the GitHub account you use for coursework to your student ID. Once you have handed in work from that account, this page becomes your way into the course: the organisation, the repository, the slides.</p>
+          <p className="lede">Connect the GitHub account you use for coursework to your student ID. One quick check now means every submission lands with the right name later.</p>
           <ol className="steps" aria-label="Registration steps">
             <li className={session ? 'done' : 'active'}>
               <span>{session ? <Check size={16} /> : '01'}</span>
@@ -46,9 +47,9 @@ export default async function Home() {
               <span>{registration ? <Check size={16} /> : '02'}</span>
               <div><strong>Add student ID</strong><small>Just the last four digits of your PolyU ID.</small></div>
             </li>
-            <li className={verified ? 'done' : registration ? 'active' : ''}>
-              <span>{verified ? <Check size={16} /> : '03'}</span>
-              <div><strong>Hand something in</strong><small>Assignment 1 from this account proves the match and unlocks the course links here.</small></div>
+            <li className={registration ? 'active' : ''}>
+              <span>03</span>
+              <div><strong>You’re matched</strong><small>Your dashboard shows what Canvas received and whether it points at this account.</small></div>
             </li>
           </ol>
         </div>
@@ -60,37 +61,11 @@ export default async function Home() {
               <>
                 <p className="eyebrow">STEP 01 · AUTHENTICATE</p>
                 <h2 id="card-title">Start with GitHub.</h2>
-                <p className="card-copy">Use the same account where you push your homework. We never receive your password or request access to private repos. Already registered and handed in? Sign in to find your course links.</p>
+                <p className="card-copy">Use the same account where you push your homework. We never receive your password or request access to private repos.</p>
                 {/* OAuth must start with a top-level browser navigation. */}
                 {/* oxlint-disable-next-line next/no-html-link-for-pages */}
                 <a className="github-button" href="/api/auth/github"><GitHubMark />Continue with GitHub<ArrowRight className="button-arrow" aria-hidden="true" size={18} /></a>
                 <div className="privacy-note"><LockKeyhole size={15} aria-hidden="true" />Public profile access only · no repository permissions</div>
-              </>
-            ) : registration && verified ? (
-              <>
-                <p className="eyebrow success-label">VERIFIED</p>
-                <div className="success-mark"><ShieldCheck size={30} /></div>
-                <h2 id="card-title">This is your course.</h2>
-                <p className="card-copy"><strong>@{session.login}</strong> is student <strong>{registration.studentId}</strong>, confirmed by the work you handed in{registration.verifiedRepo && <>: <a className="inline-link" href={registration.verifiedRepo} target="_blank" rel="noreferrer">{registration.verifiedRepo.replace('https://github.com/', '')}</a></>}.</p>
-                <ul className="hub" aria-label="Course links">
-                  {COURSE_LINKS.map((link) => (
-                    <li key={link.href}>
-                      <a href={link.href} target="_blank" rel="noreferrer"><strong>{link.label}</strong><ExternalLink size={14} aria-hidden="true" /></a>
-                      <small>{link.note}</small>
-                    </li>
-                  ))}
-                </ul>
-                <details className="hub-details">
-                  <summary>Change your student ID or answer the survey</summary>
-                  <RegistrationForm login={session.login} avatarUrl={session.avatarUrl} initialStudentId={registration.studentId} isUpdate />
-                  <SurveyForm
-                    initial={{ experience: survey?.experience ?? null, terminal: survey?.terminal ?? null, agentUse: survey?.agentUse ?? null, agentTools: survey?.agentTools ?? null, machine: survey?.machine ?? null, interest: survey?.interest ?? null }}
-                    initialGoal={survey?.goal ?? ''}
-                    answered={survey !== null}
-                  />
-                </details>
-                {/* oxlint-disable-next-line next/no-html-link-for-pages */}
-                <a className="text-link" href="/api/auth/logout">Use a different GitHub account</a>
               </>
             ) : registration ? (
               <>
@@ -98,9 +73,35 @@ export default async function Home() {
                 <div className="success-mark"><Check size={30} /></div>
                 <h2 id="card-title">You’re on the list.</h2>
                 <p className="card-copy"><strong>@{session.login}</strong> is matched to student ID <strong>{registration.studentId}</strong>.</p>
-                <p className="card-copy hub-pending">
-                  <strong>Next:</strong> hand in Assignment 1 on Canvas as a public repository on <strong>this</strong> account. Once it has been checked, this page becomes your way into the course: the organisation invitation, the repository, the slides.
-                </p>
+                <section className="dash" aria-label="Your assignments">
+                  <h3>Your assignments</h3>
+                  <ul>
+                    {ASSIGNMENTS.map((a) => {
+                      const sub = submissions.find((s) => s.assignment === a.id);
+                      const status = sub ? submissionStatus(sub, registration.githubLogin, () => null) : null;
+                      return (
+                        <li key={a.id} className={status ? `dash-${status.kind}` : 'dash-none'}>
+                          <div className="dash-head">
+                            <strong>Assignment {a.id} · <a href={a.brief} target="_blank" rel="noreferrer">{a.title}</a></strong>
+                            <small>due {a.due}</small>
+                          </div>
+                          {sub && status ? (
+                            <p>
+                              Canvas has <a href={sub.url} target="_blank" rel="noreferrer">{sub.url.replace('https://github.com/', '')}</a>.{' '}
+                              {status.kind === 'match'
+                                ? 'It is on your registered account — nothing to do.'
+                                : status.kind === 'mismatch'
+                                  ? `It belongs to @${status.owner}, not @${registration.githubLogin}. Either resubmit the URL of a repo on this account, or update your match above to the account you actually push from.`
+                                  : describe(status)}
+                            </p>
+                          ) : (
+                            <p>Nothing imported from Canvas yet. Submit the repository URL on Canvas; it appears here after the next import.</p>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
                 <RegistrationForm login={session.login} avatarUrl={session.avatarUrl} initialStudentId={registration.studentId} isUpdate />
                 <SurveyForm
                   initial={{ experience: survey?.experience ?? null, terminal: survey?.terminal ?? null, agentUse: survey?.agentUse ?? null, agentTools: survey?.agentTools ?? null, machine: survey?.machine ?? null, interest: survey?.interest ?? null }}
@@ -123,6 +124,20 @@ export default async function Home() {
           </section>
           <p className="support-copy">Something not right? Contact your course instructor.</p>
         </div>
+      </section>
+      <section className="links-band" aria-labelledby="links-title">
+        <div>
+          <p className="eyebrow">THE COURSE · FROM HERE</p>
+          <h2 id="links-title">Everything is one click away.</h2>
+        </div>
+        <ul className="hub">
+          {COURSE_LINKS.map((link) => (
+            <li key={link.href}>
+              <a href={link.href} target="_blank" rel="noreferrer"><strong>{link.label}</strong><ExternalLink size={14} aria-hidden="true" /></a>
+              <small>{link.note}</small>
+            </li>
+          ))}
+        </ul>
       </section>
       <footer><span>SD5913 · {CURRENT_COHORT}</span><span>POLYU SCHOOL OF DESIGN</span></footer>
     </main>

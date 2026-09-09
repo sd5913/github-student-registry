@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { env } from 'cloudflare:workers';
 import { isAdminLogin } from '@/lib/admin';
 import { CURRENT_COHORT } from '@/lib/cohort';
-import { listCohorts, listRegistrations, listRoster } from '@/lib/db';
+import { listCohorts, listRegistrations, listRoster, listSubmissions } from '@/lib/db';
 import type { AppEnv } from '@/lib/env';
 import { readSession } from '@/lib/session';
 import { AdminTable } from './admin-table';
@@ -34,7 +34,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const cohorts = await listCohorts(env.DB);
   const requested = (await searchParams).cohort;
   const cohort = requested && cohorts.includes(requested) ? requested : CURRENT_COHORT;
-  const [registrations, roster] = await Promise.all([listRegistrations(env.DB, cohort), listRoster(env.DB, cohort)]);
+  const [registrations, roster, submissions] = await Promise.all([listRegistrations(env.DB, cohort), listRoster(env.DB, cohort), listSubmissions(env.DB, cohort)]);
   const claimed = new Set(registrations.map((row) => row.studentId));
   const missing = roster.filter((id) => !claimed.has(id));
 
@@ -61,10 +61,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           </div>
         </div>
 
-        <AdminTable cohort={cohort} registrations={registrations} missing={missing} />
+        <AdminTable cohort={cohort} registrations={registrations} missing={missing} submissions={submissions} />
 
         <p className="admin-footnote">
           Releasing a registration frees the ID so its owner can claim it. Editing checks the new ID against the {cohort} roster.
+          Submissions are what Canvas received; the verdict compares the repository owner with the registered login and is recomputed on every view.
           {/* oxlint-disable-next-line next/no-html-link-for-pages */}
           {' '}<a href="/api/auth/logout">Sign out</a>
         </p>

@@ -175,34 +175,25 @@ registered yet, and a CSV download. From there you can release a registration
 correct a student ID in place. An edited ID is checked against the roster and
 refused if another account already holds it.
 
-### Verifying a registration
+### Submissions, and whether they match
 
-A registration is a claim: this GitHub account says it belongs to this student
-ID. It becomes a fact once the student hands in work from that account, so
-`/admin` lets an instructor **verify** a row, by hand or by pasting a list of
-`login repository-url` lines (the SD5913 admin workspace's
-`scripts/check_submissions.py` prints one). The repository that proved the
-match is kept and shown to the student.
+Assignments are handed in on Canvas as repository URLs. `/admin` takes that list —
+one `student_id url` line per student, pasted from the Canvas export — and
+compares each URL's owner with the GitHub login the student registered. Every
+row then shows **match**, **MISMATCH** (the repo is on another account),
+**owner unregistered**, or **not a repo**, and the flagged ones are listed at the
+top. The student sees the same verdict on their own dashboard after signing in,
+with what to do about it. Importing again replaces the earlier lines.
 
-Verification is what unlocks the course on the home page: a verified student
-sees the organisation invitation, the course repository, the slides and the
-setup link in one place, and the **Copy … verified logins** button feeds the
-org invite. An unverified registration is told what to hand in and from which
-account. Releasing a registration clears its verification; editing the ID
-keeps it.
+The **Copy … matched logins** button feeds the org invite: an account with a
+matching submission is proven to be the student's. A row can also be verified
+by hand for the odd case. The CSV export carries `a1_url` and `a1_status`.
 
-Access is granted by the `ADMIN_LOGINS` Worker secret, a comma-separated list
-of GitHub logins:
+**Roster additions.** A late enrolment or a test account is added from `/admin`
+(*Add an ID to the roster*) without re-seeding the file.
 
-```bash
-echo "your-github-login" | npx wrangler secret put ADMIN_LOGINS --config dist/server/wrangler.json
-```
-
-Adding a teaching assistant is another `wrangler secret put`; it takes effect on
-the next request with no redeploy. Anyone signed in who is not on the list gets
-a 404, so the page is not advertised to students. If the secret is unset, nobody
-has access. Note that the list matches GitHub logins, so renaming your GitHub
-account means updating the secret.
+The course links — slides, repository, organisation, lab setup — sit at the foot
+of the home page for everyone, signed in or not.
 
 ## Export the class list
 
@@ -215,7 +206,7 @@ curl -fsS \
   -o sd5913-github-students.csv
 ```
 
-Remove `?format=csv` for JSON. The export includes student ID, GitHub login and numeric ID, profile URL, name, timestamps, and, once verified, the verification time and the repository that proved the match.
+Remove `?format=csv` for JSON. The export includes student ID, GitHub login and numeric ID, profile URL, name, timestamps, the verification columns, and assignment 1's submitted URL and verdict.
 
 ## Security
 

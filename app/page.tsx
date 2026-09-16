@@ -32,6 +32,28 @@ export default async function Home() {
         <div className="header-meta"><span className="status-dot" />GITHUB · STUDENT REGISTRY</div>
       </header>
 
+      <section className="links-band" aria-labelledby="links-title">
+        <div className="links-band-head">
+          <p className="eyebrow">THE COURSE · FROM HERE</p>
+          <h2 id="links-title">Everything is one click away.</h2>
+        </div>
+        <ul className="hub">
+          {COURSE_LINKS.map((link) => {
+            const face = (
+              <>
+                <span className="hub-head"><strong>{link.label}</strong>{link.internal ? <ArrowRight size={14} aria-hidden="true" /> : <ExternalLink size={14} aria-hidden="true" />}</span>
+                <small>{link.note}</small>
+              </>
+            );
+            return (
+              <li key={link.href} className={link.internal ? 'hub-here' : undefined}>
+                {link.internal ? <Link href={link.href}>{face}</Link> : <a href={link.href} target="_blank" rel="noreferrer">{face}</a>}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
       <section className="registration-section">
         <div className="marginalia" aria-hidden="true">CONNECT · IDENTIFY · SUBMIT · CONNECT · IDENTIFY · SUBMIT</div>
         <div className="intro-column">
@@ -124,20 +146,6 @@ export default async function Home() {
           </section>
           <p className="support-copy">Something not right? Contact your course instructor.</p>
         </div>
-      </section>
-      <section className="links-band" aria-labelledby="links-title">
-        <div>
-          <p className="eyebrow">THE COURSE · FROM HERE</p>
-          <h2 id="links-title">Everything is one click away.</h2>
-        </div>
-        <ul className="hub">
-          {COURSE_LINKS.map((link) => (
-            <li key={link.href}>
-              <a href={link.href} target="_blank" rel="noreferrer"><strong>{link.label}</strong><ExternalLink size={14} aria-hidden="true" /></a>
-              <small>{link.note}</small>
-            </li>
-          ))}
-        </ul>
       </section>
       <footer><span>SD5913 · {CURRENT_COHORT}</span><span>POLYU SCHOOL OF DESIGN</span></footer>
     </main>

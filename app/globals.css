@@ -131,7 +131,8 @@ h1 { font-size:clamp(58px,8vw,122px); line-height:.87; letter-spacing:-.055em; f
 /* The course band sits under the header: the first thing on the page is the
    course, not the form. One row of cards on a laptop, one column on a phone. */
 .links-band { padding:clamp(20px,2.6vw,30px) clamp(20px,4vw,56px) clamp(22px,2.8vw,32px); border-bottom:1px solid var(--line); background:var(--soft); }
-.links-band-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin-bottom:14px; }
+.links-band-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin-bottom:6px; }
+.links-band-note { font-size:12px; line-height:1.4; color:var(--muted); margin:0 0 14px; max-width:62ch; }
 .links-band .eyebrow { margin:0; }
 .links-band h2 { font-size:clamp(19px,2.2vw,27px); line-height:1.05; letter-spacing:-.03em; margin:0; }
 .hub { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(215px,100%),1fr)); gap:10px; }
@@ -143,6 +144,17 @@ h1 { font-size:clamp(58px,8vw,122px); line-height:.87; letter-spacing:-.055em; f
 .hub-head svg { flex:none; color:var(--muted); }
 .hub li>a:hover .hub-head strong { text-decoration:underline; text-underline-offset:3px; }
 .hub small { display:block; color:var(--muted); font-size:12px; line-height:1.4; }
+.hub .hub-aside { font-size:11px; color:#8b919a; margin-top:2px; }
+/* This week's slides: the whole width of the band, and the only dark card on
+   the page. A student arriving on a Thursday should not have to look for it. */
+.hub li.hub-featured { grid-column:1/-1; flex-direction:column; gap:5px; }
+.hub li.hub-featured>a.hub-week { background:var(--ink); border-color:var(--ink); border-left-color:var(--orange); color:#fff; padding:clamp(15px,2.2vw,21px) clamp(16px,2.4vw,24px); gap:6px; }
+.hub li.hub-featured>a.hub-week:hover { border-color:var(--ink); border-left-color:var(--orange); background:#172130; }
+.hub-week .hub-head { font-size:clamp(17px,2.3vw,24px); letter-spacing:-.025em; }
+.hub-week .hub-head svg { color:var(--teal); }
+.hub-week small { color:#b9c0cb; }
+.hub li.hub-featured>a.hub-all { flex:none; align-self:flex-start; border:0; background:none; padding:0 2px; font-family:var(--font-mono),monospace; font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.hub li.hub-featured>a.hub-all:hover { color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 .dash { margin:0 0 26px; }
 .dash h3 { font-size:13px; font-family:var(--font-mono),monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:400; margin:0 0 10px; }
 .dash ul { list-style:none; margin:0; padding:0; }

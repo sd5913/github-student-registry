@@ -1,22 +1,26 @@
 import { cookies } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { CURRENT_COHORT } from '@/lib/cohort';
-import { getRegistration, saveMarkVote } from '@/lib/db';
+import { saveMarkVote } from '@/lib/db';
+import type { AppEnv } from '@/lib/env';
 import { isMark } from '@/lib/marks';
 import { readSession } from '@/lib/session';
+import { mayVote } from '@/lib/voter';
 import { voteState } from '@/lib/vote-state';
 
 /**
- * The vote belongs to a matched student, not to any signed-in GitHub user —
+ * The vote belongs to the matched class, not to any signed-in GitHub user —
  * the same rule the survey follows, and the reason a vote can be counted once
- * per person without ever storing who they are beyond their github id.
+ * per person without ever storing who they are beyond their github id. An
+ * instructor is let in by the /admin check rather than by a registration.
  */
 async function voter(): Promise<{ githubId: string } | Response> {
   const cookieStore = await cookies();
   const session = await readSession(cookieStore.get('sd5913_session')?.value);
   if (!session) return Response.json({ error: 'Sign in with GitHub on the home page first.' }, { status: 401 });
-  const registration = await getRegistration(env.DB, CURRENT_COHORT, session.githubId);
-  if (!registration) return Response.json({ error: 'Match your student ID on the home page first.' }, { status: 403 });
+  if (!await mayVote(env.DB, CURRENT_COHORT, session, (env as AppEnv).ADMIN_LOGINS)) {
+    return Response.json({ error: 'Match your student ID on the home page first.' }, { status: 403 });
+  }
   return { githubId: session.githubId };
 }
 

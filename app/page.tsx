@@ -4,7 +4,7 @@ import { env } from 'cloudflare:workers';
 import { ArrowRight, Check, ExternalLink, LockKeyhole } from 'lucide-react';
 import { CURRENT_COHORT } from '@/lib/cohort';
 import { getRegistration, getSurvey, listSubmissionsForStudent } from '@/lib/db';
-import { ASSIGNMENTS, COURSE_LINKS } from '@/lib/links';
+import { ALL_WEEKS, ASSIGNMENTS, COURSE_LINKS, CURRENT_WEEK } from '@/lib/links';
 import { describe, submissionStatus } from '@/lib/submissions';
 import { readSession } from '@/lib/session';
 import { RegistrationForm } from './registration-form';
@@ -37,12 +37,22 @@ export default async function Home() {
           <p className="eyebrow">THE COURSE · FROM HERE</p>
           <h2 id="links-title">Everything is one click away.</h2>
         </div>
+        <p className="links-band-note">Bookmark this page and the course repository — everything for the week is found from here.</p>
         <ul className="hub">
+          {/* The slides lead: this is what the class comes back for every week. */}
+          <li className="hub-featured">
+            <a className="hub-week" href={CURRENT_WEEK.href} target="_blank" rel="noreferrer">
+              <span className="hub-head"><strong>This week · Week {CURRENT_WEEK.n} — {CURRENT_WEEK.title}</strong><ExternalLink size={18} aria-hidden="true" /></span>
+              <small>The slides for {CURRENT_WEEK.date}, with the drills you can run in the browser.</small>
+            </a>
+            <a className="hub-all" href={ALL_WEEKS} target="_blank" rel="noreferrer">All weeks →</a>
+          </li>
           {COURSE_LINKS.map((link) => {
             const face = (
               <>
                 <span className="hub-head"><strong>{link.label}</strong>{link.internal ? <ArrowRight size={14} aria-hidden="true" /> : <ExternalLink size={14} aria-hidden="true" />}</span>
                 <small>{link.note}</small>
+                {link.aside && <small className="hub-aside">{link.aside}</small>}
               </>
             );
             return (

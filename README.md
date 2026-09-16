@@ -193,12 +193,15 @@ by hand for the odd case. The CSV export carries `a1_url` and `a1_status`.
 **Roster additions.** A late enrolment or a test account is added from `/admin`
 (*Add an ID to the roster*) without re-seeding the file.
 
-The course links — slides, repository, organisation, lab setup, the mark vote —
-are the first thing on the home page, for everyone, signed in or not.
+The course links are the first thing on the home page, for everyone, signed in
+or not: this week's slides on a wide card of their own, then the repository,
+next week's slides as a draft pull request, the mark vote, the organisation and
+the lab setup. **`CURRENT_WEEK` in `lib/links.ts` is the one place to bump each
+week** — week number, title, teaching day, and the link to that week's slides.
 
 ## Voting on the mark
 
-`/vote` shows the registered class two of the week-2 marks (`public/marks/01.jpg`
+`/vote` shows the class two of the week-2 marks (`public/marks/01.jpg`
 … `56.jpg`) and asks which is the better mark for the course. Clicking one
 records the vote and swaps in the next pair; *neither* records nothing and asks
 again. The pair is chosen server-side from the marks with the fewest
@@ -208,6 +211,11 @@ GitHub id and the two mark numbers — never a student ID — and the unique ind
 on `(cohort, github_id, a, b)` holds one verdict per pair per person.
 
 After fifteen votes a student also sees the class's current top eight.
+
+Voting is open to a matched registration **or** to whoever passes the `/admin`
+gate, so an instructor can open the page and see what the room sees without a
+registration being invented for them. Everyone else gets a card pointing at the
+home page.
 
 `/admin/marks` ranks every mark with [Bradley–Terry](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
 strengths, fitted by the MM iteration of Hunter (2004) and regularised with half

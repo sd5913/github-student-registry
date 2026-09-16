@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { env } from 'cloudflare:workers';
 import { ArrowRight } from 'lucide-react';
 import { CURRENT_COHORT } from '@/lib/cohort';
-import { getRegistration } from '@/lib/db';
+import type { AppEnv } from '@/lib/env';
 import { readSession } from '@/lib/session';
+import { mayVote } from '@/lib/voter';
 import { voteState } from '@/lib/vote-state';
 import { VotePane } from './vote-pane';
 
@@ -26,11 +27,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 export default async function Vote() {
   const cookieStore = await cookies();
   const session = await readSession(cookieStore.get('sd5913_session')?.value);
-  const registration = session ? await getRegistration(env.DB, CURRENT_COHORT, session.githubId) : null;
+  // Matched student, or the instructor by the /admin check.
+  const allowed = session !== null && await mayVote(env.DB, CURRENT_COHORT, session, (env as AppEnv).ADMIN_LOGINS);
 
   // Signed out, or signed in but not matched: the same short card either way,
   // with the one link that fixes it.
-  if (!registration) {
+  if (!session || !allowed) {
     return (
       <Shell>
         <section className="vote-shell">
@@ -51,7 +53,7 @@ export default async function Vote() {
 
   // The same state the API answers with after a vote, so the first pair is in
   // the HTML that arrives.
-  const initial = await voteState(env.DB, CURRENT_COHORT, registration.githubId);
+  const initial = await voteState(env.DB, CURRENT_COHORT, session.githubId);
 
   return (
     <Shell>

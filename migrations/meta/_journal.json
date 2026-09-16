@@ -43,6 +43,13 @@
       "when": 1788927415687,
       "tag": "0005_damp_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789567773814,
+      "tag": "0006_tricky_hairball",
+      "breakpoints": true
     }
   ]
 }

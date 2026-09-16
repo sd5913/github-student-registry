@@ -80,3 +80,22 @@ export const submissions = sqliteTable(
   },
   (table) => [uniqueIndex('idx_submissions_cohort_assignment_student').on(table.cohort, table.assignment, table.studentId)],
 );
+
+// Pairwise votes on the week-2 marks: one row per pair a student has judged.
+// Joins to `registrations` by github id, like `survey_responses`, so a vote
+// never carries a student ID. The pair is stored with the lower number first,
+// so "I have already seen these two" is a single lookup and a student cannot
+// be asked the same question twice.
+export const markVotes = sqliteTable(
+  'mark_votes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    cohort: text('cohort').notNull(),
+    githubId: text('github_id').notNull(),
+    a: integer('a').notNull(),
+    b: integer('b').notNull(),
+    winner: integer('winner').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('idx_mark_votes_cohort_voter_pair').on(table.cohort, table.githubId, table.a, table.b)],
+);

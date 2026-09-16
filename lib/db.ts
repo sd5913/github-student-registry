@@ -1,3 +1,5 @@
+import { pairKey } from './marks';
+import type { Comparison } from './rank';
 import type { Session } from './session';
 import type { SurveyField } from './survey';
 
@@ -166,4 +168,35 @@ export async function listSubmissionsForStudent(db: D1Database, cohort: string, 
 export async function addRosterId(db: D1Database, cohort: string, studentId: string): Promise<boolean> {
   const result = await db.prepare('INSERT OR IGNORE INTO cohort_roster (cohort, student_id) VALUES (?, ?)').bind(cohort, studentId).run();
   return (result.meta.changes ?? 0) > 0;
+}
+
+/**
+ * A pair this voter has already judged, or everyone's votes for the ranking.
+ * Pairs are written with the lower mark in `a`, so a pair has one identity and
+ * the unique index can hold a voter to one verdict per pair.
+ */
+export async function saveMarkVote(db: D1Database, cohort: string, githubId: string, a: number, b: number, winner: number): Promise<void> {
+  const [low, high] = a < b ? [a, b] : [b, a];
+  await db.prepare(
+    `INSERT INTO mark_votes (cohort, github_id, a, b, winner, created_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(cohort, github_id, a, b) DO UPDATE SET winner = excluded.winner, created_at = excluded.created_at`,
+  ).bind(cohort, githubId, low, high, winner, new Date().toISOString()).run();
+}
+
+/** Every vote in the cohort, as the ranking wants them. No voter attached. */
+export async function listMarkVotes(db: D1Database, cohort: string): Promise<Comparison[]> {
+  const result = await db.prepare('SELECT a, b, winner FROM mark_votes WHERE cohort = ?').bind(cohort).all<Comparison>();
+  return result.results;
+}
+
+/** The pairs one voter has judged. Its size is how many comparisons they made. */
+export async function listVoterPairs(db: D1Database, cohort: string, githubId: string): Promise<Set<string>> {
+  const result = await db.prepare('SELECT a, b FROM mark_votes WHERE cohort = ? AND github_id = ?').bind(cohort, githubId).all<{ a: number; b: number }>();
+  return new Set(result.results.map((row) => pairKey(row.a, row.b)));
+}
+
+/** Header numbers for the instructor view: how much of the class this is. */
+export async function markVoteTotals(db: D1Database, cohort: string): Promise<{ total: number; voters: number }> {
+  const row = await db.prepare('SELECT COUNT(*) AS total, COUNT(DISTINCT github_id) AS voters FROM mark_votes WHERE cohort = ?').bind(cohort).first<{ total: number; voters: number }>();
+  return { total: row?.total ?? 0, voters: row?.voters ?? 0 };
 }

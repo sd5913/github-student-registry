@@ -8,6 +8,7 @@ A Cloudflare Worker that lets students authenticate with GitHub and match that a
 - Signed, HTTP-only sessions; GitHub access tokens are never stored
 - One GitHub account per student ID, enforced by D1 unique indexes
 - Self-service updates for returning students
+- Pairwise voting on the week-2 marks, ranked by Bradley–Terry
 - Instructor-only JSON and CSV exports
 - Responsive interface based on the visual language of [ait4x.org](https://ait4x.org)
 
@@ -192,8 +193,28 @@ by hand for the odd case. The CSV export carries `a1_url` and `a1_status`.
 **Roster additions.** A late enrolment or a test account is added from `/admin`
 (*Add an ID to the roster*) without re-seeding the file.
 
-The course links — slides, repository, organisation, lab setup — sit at the foot
-of the home page for everyone, signed in or not.
+The course links — slides, repository, organisation, lab setup, the mark vote —
+are the first thing on the home page, for everyone, signed in or not.
+
+## Voting on the mark
+
+`/vote` shows the registered class two of the week-2 marks (`public/marks/01.jpg`
+… `56.jpg`) and asks which is the better mark for the course. Clicking one
+records the vote and swaps in the next pair; *neither* records nothing and asks
+again. The pair is chosen server-side from the marks with the fewest
+comparisons so far, never repeating a pair that voter has already judged, and is
+served in a random left-right order. A vote stores the cohort, the voter's
+GitHub id and the two mark numbers — never a student ID — and the unique index
+on `(cohort, github_id, a, b)` holds one verdict per pair per person.
+
+After fifteen votes a student also sees the class's current top eight.
+
+`/admin/marks` ranks every mark with [Bradley–Terry](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
+strengths, fitted by the MM iteration of Hunter (2004) and regularised with half
+a win and half a loss against a fixed reference so a mark with two wins and no
+losses cannot run away with it. A score of 1 is an average mark. The same table
+downloads as CSV from `/api/admin/marks?format=csv`, with the `ADMIN_TOKEN`
+bearer or an admin session.
 
 ## Export the class list
 

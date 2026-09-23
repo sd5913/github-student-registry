@@ -30,7 +30,6 @@ export const COURSE_LINKS: readonly CourseLink[] = [
     note: 'Next week opens as a draft pull request and fills up over the week. Say in its comments what you want more of.',
     aside: 'Press Watch on sd5913/teaching and GitHub tells you when it moves — it notifies on pull requests and comments, not on every push.',
   },
-  { label: 'Vote on the mark', href: '/vote', note: 'Fifty-six marks from week 2. Two at a time, pick the better one.', internal: true },
   { label: 'The sd5913 organisation', href: 'https://github.com/sd5913', note: 'Group project repos live here later. Accept the invitation when it arrives by email.' },
   { label: 'Lab machine setup', href: 'https://github.com/ait4x/v915-setup', note: 'One file to download and double-click, on a V915 machine or your own laptop.' },
 ];

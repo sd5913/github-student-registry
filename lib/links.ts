@@ -4,7 +4,7 @@
 // ── Bump this on the morning of each lecture. It is the only place the home
 //    page's "this week" comes from: the week number, its title, the day it is
 //    taught, and the direct link to that week's slides. ──
-export const CURRENT_WEEK = { n: 4, title: 'Interfaces', date: 'Thu 24 Sep', href: 'https://sd5913.github.io/teaching/week04/' } as const;
+export const CURRENT_WEEK = { n: 7, title: 'Build something amazing', date: 'Thu 22 Oct', href: 'https://sd5913.github.io/teaching/week07/' } as const;
 
 /** Every week, for when this week is not the one being looked for. */
 export const ALL_WEEKS = 'https://sd5913.github.io/teaching/';

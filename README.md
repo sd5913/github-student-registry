@@ -194,10 +194,11 @@ by hand for the odd case. The CSV export carries `a1_url` and `a1_status`.
 (*Add an ID to the roster*) without re-seeding the file.
 
 The course links are the first thing on the home page, for everyone, signed in
-or not: this week's slides on a wide card of their own, then the repository,
-next week's slides as a draft pull request, the mark vote, the organisation and
-the lab setup. **`CURRENT_WEEK` in `lib/links.ts` is the one place to bump each
-week** — week number, title, teaching day, and the link to that week's slides.
+or not: this week's slides on a wide card of their own, direct PDF and
+all-weeks links, then the repository, current tutorial, next week's slides
+as a draft pull request, the organisation and the lab setup.
+**`CURRENT_WEEK` in `lib/links.ts` is the one place to bump each week** — week
+number, title, teaching day, and links to that week's slides, PDF and tutorial.
 
 ## Voting on the mark
 

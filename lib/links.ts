@@ -3,8 +3,15 @@
 
 // ── Bump this on the morning of each lecture. It is the only place the home
 //    page's "this week" comes from: the week number, its title, the day it is
-//    taught, and the direct link to that week's slides. ──
-export const CURRENT_WEEK = { n: 8, title: 'Build together. Ship something.', date: 'Thu 29 Oct', href: 'https://sd5913.github.io/teaching/week08/' } as const;
+//    taught, and the direct links to its slides, PDF and tutorial. ──
+export const CURRENT_WEEK = {
+  n: 11,
+  title: 'Identity, deployment and creative tools.',
+  date: 'Thu 19 Nov',
+  href: 'https://sd5913.github.io/teaching/week11/',
+  pdfHref: 'https://sd5913.github.io/teaching/week11/SD5913-week11.pdf',
+  tutorialHref: 'https://github.com/sd5913/pfad/blob/2026/week11/README.md',
+} as const;
 
 /** Every week, for when this week is not the one being looked for. */
 export const ALL_WEEKS = 'https://sd5913.github.io/teaching/';
@@ -24,6 +31,7 @@ export type CourseLink = {
 // worth a bookmark.
 export const COURSE_LINKS: readonly CourseLink[] = [
   { label: 'Course repository', href: 'https://github.com/sd5913/pfad', note: 'Tutorials and assignment briefs. Clone it, pull it every week.' },
+  { label: `Week ${CURRENT_WEEK.n} tutorial`, href: CURRENT_WEEK.tutorialHref, note: 'Choose authentication and deployment, or Blender into Godot.' },
   {
     label: 'Next week’s slides, as they are written',
     href: 'https://github.com/sd5913/teaching/pulls',

@@ -5,12 +5,14 @@
 //    page's "this week" comes from: the week number, its title, the day it is
 //    taught, and the direct links to its slides, PDF and tutorial. ──
 export const CURRENT_WEEK = {
-  n: 11,
-  title: 'Identity, deployment and creative tools.',
-  date: 'Thu 19 Nov',
-  href: 'https://sd5913.github.io/teaching/week11/',
-  pdfHref: 'https://sd5913.github.io/teaching/week11/SD5913-week11.pdf',
-  tutorialHref: 'https://github.com/sd5913/pfad/blob/2026/week11/README.md',
+  n: 12,
+  title: 'Programming concepts and subject AMA.',
+  date: 'Thu 26 Nov',
+  description: 'Course review, project delivery, eSFQ and an open AMA about the subject material.',
+  tutorialNote: 'Move your group project forward: deploy a web app or automate builds, then try and refine it. Concept practice is optional.',
+  href: 'https://sd5913.github.io/teaching/week12/',
+  pdfHref: 'https://sd5913.github.io/teaching/week12/SD5913-week12.pdf',
+  tutorialHref: 'https://github.com/sd5913/pfad/blob/2026/week12/README.md',
 } as const;
 
 /** Every week, for when this week is not the one being looked for. */
@@ -31,7 +33,7 @@ export type CourseLink = {
 // worth a bookmark.
 export const COURSE_LINKS: readonly CourseLink[] = [
   { label: 'Course repository', href: 'https://github.com/sd5913/pfad', note: 'Tutorials and assignment briefs. Clone it, pull it every week.' },
-  { label: `Week ${CURRENT_WEEK.n} tutorial`, href: CURRENT_WEEK.tutorialHref, note: 'Choose authentication and deployment, or Blender into Godot.' },
+  { label: `Week ${CURRENT_WEEK.n} tutorial`, href: CURRENT_WEEK.tutorialHref, note: CURRENT_WEEK.tutorialNote },
   {
     label: 'Next week’s slides, as they are written',
     href: 'https://github.com/sd5913/teaching/pulls',

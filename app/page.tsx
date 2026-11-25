@@ -43,7 +43,7 @@ export default async function Home() {
           <li className="hub-featured">
             <a className="hub-week" href={CURRENT_WEEK.href} target="_blank" rel="noreferrer">
               <span className="hub-head"><strong>This week · Week {CURRENT_WEEK.n} — {CURRENT_WEEK.title}</strong><ExternalLink size={18} aria-hidden="true" /></span>
-              <small>Slides for {CURRENT_WEEK.date}: authentication, deployment and creative tools in Blender and Godot.</small>
+              <small>Slides for {CURRENT_WEEK.date}: {CURRENT_WEEK.description}</small>
             </a>
             <a className="hub-all" href={CURRENT_WEEK.pdfHref} target="_blank" rel="noreferrer">Download Week {CURRENT_WEEK.n} PDF</a>
             <a className="hub-all" href={ALL_WEEKS} target="_blank" rel="noreferrer">All weeks →</a>
